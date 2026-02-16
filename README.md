@@ -20,6 +20,8 @@ This project implements and evaluates multiple Reinforcement Learning (RL) agent
 
 The project was developed as part of a Reinforcement Learning course and focuses on the **practical implementation, evaluation, and comparison of value-based and policy-based RL methods**, highlighting the impact of observability and architecture on performance.
 
+A more detailed discussion about the project is available in the following paper ...
+
 🛠️ **Installation & Dependencies**
 
 To run this project, ensure you have **Python 3.8+** installed. The project relies on deep learning frameworks and visualization tools.
