@@ -6,7 +6,13 @@
 
 **Course**: Reinforcement Learning
 
+**Master Degree**: Control Systems Engineering
+
+University of Padua, Italy
+
 **a.y**: 2025/2026
+
+
 
 ---
 
@@ -55,28 +61,16 @@ Each stage increases complexity and highlights specific RL challenges.
 
 Provide a **performance lower bound and benchmark** for RL agents.
 
-## Architecture
+### Optimal Pathfinding and Safety Fallback
 
-Hierarchical decision logic:
+The heuristic agent relies on a hierarchical decision strategy designed to combine optimal fruit acquisition with long-term survivability.
 
-### 1. Optimal Pathfinding
+First, the environment grid is modeled as an unweighted graph, where each cell represents a node and valid movements define the edges. Within this representation, the agent applies the Breadth-First Search (BFS) algorithm to compute the shortest collision-free path from the snake’s head to the fruit. This guarantees optimal pathfinding whenever a safe path exists.
 
-The grid is modeled as a graph.
+However, in many configurations the fruit may be temporarily unreachable due to obstruction by the snake’s own body. In these cases, a safety-oriented fallback mechanism is activated. The agent evaluates all admissible actions and uses a Flood Fill algorithm to estimate the size of the reachable free space associated with each action. The action leading to the largest free region is selected, as it maximizes the available maneuvering space and reduces the probability of future entrapment.
 
-Breadth-First Search (BFS) computes the shortest safe path to the fruit.
+This hierarchical combination allows the agent to pursue optimal paths when feasible, while reverting to conservative, space-preserving behavior in constrained scenarios, effectively balancing immediate reward maximization with long-term survival.
 
-### 2. Safety Fallback
-
-If the fruit is unreachable:
-
-Flood Fill estimates free space for each possible action.
-
-The agent selects the action maximizing future survivability.
-
-This balances:
-
-- Optimality (fruit collection)
-- Safety (space preservation)
 
 ---
 
@@ -99,24 +93,15 @@ This defines a strong non-learning benchmark.
 
 ## State Representation
 
-Full grid visibility:
-
-
-This satisfies the Markov property.
+In the Fully Observable setting, the agent has access to the entire grid at every timestep. This means the observation contains complete information about the environment, including the snake’s body, the fruit position, and the boundaries. As a result, the observation fully represents the true environment state, satisfying the Markov property. This property is critical for value-based reinforcement learning methods, as it ensures that optimal decisions can be made based solely on the current observation without requiring additional memory of past states.
 
 ---
 
 ## Algorithm: Double Deep Q-Network (DDQN)
 
-Motivation:
+The learning agent is based on the Double Deep Q-Network (DDQN) algorithm, which was selected to address a known limitation of the standard Deep Q-Network (DQN): overestimation bias. In standard DQN, the same network is used both to select and evaluate actions, which can lead to systematically inflated Q-value estimates and unstable learning.
 
-Standard DQN suffers from **overestimation bias**.
-
-DDQN separates:
-
-Action selection and action evaluation.
-
-This stabilizes learning.
+DDQN resolves this issue by decoupling these two roles. The online network is used to select the best action, while a separate target network is used to evaluate that action. This separation reduces overoptimistic value estimates and leads to more stable and reliable training. As a consequence, the agent is able to learn more accurate value functions and develop more effective policies for long-term survival and reward maximization.
 
 ---
 
@@ -174,46 +159,45 @@ The environment is fully solvable.
 
 ## Motivation
 
-Real-world systems often lack full observability.
+In the Partially Observable setting, the agent no longer has access to the full grid. Instead, it receives only a local observation window centered on the snake’s head. This limited field of view removes access to global information, such as the full body topology and distant obstacles.
 
-The agent receives only:
-
-
-This converts the environment into a:
-
-**Partially Observable Markov Decision Process (POMDP)**
+Because the observation no longer fully represents the true environment state, the Markov property is violated. The same observation may correspond to different underlying states, depending on information outside the visible region. This transforms the problem into a **Partially Observable Markov Decision Process (POMDP)**, where optimal decision-making requires inferring hidden information from observation history.
 
 ---
 
 ## Algorithm: Dueling Double DQN
 
-Enhancements:
+To address the increased uncertainty introduced by partial observability, the DDQN architecture was extended with temporal processing and value decomposition mechanisms.
 
 ### Frame Stacking
 
-Stack last 4 frames
+To compensate for the lack of full state information, the agent uses **frame stacking**, where the last 4 observations are concatenated into a single input tensor.
 
-Provides short-term temporal memory.
+This provides a finite temporal memory, allowing the network to infer short-term dynamics such as:
 
-### Dueling Architecture
+- Snake velocity  
+- Movement direction  
+- Relative motion of nearby body segments  
 
-Separates:
-
-State value:
-
-V(s)
-
-and
-
-Action advantage:
-
-A(s,a)
-
-Improves value estimation.
+This temporal context improves state representation compared to a single static frame.
 
 ---
 
-## Architecture Summary
+### Dueling Architecture
+
+In addition to frame stacking, a **Dueling Network Architecture** is used to improve value estimation.
+
+The network is split into two separate streams:
+
+- The **state value function** `V(s)`, which estimates how favorable a state is independently of the action  
+- The **advantage function** `A(s,a)`, which estimates the relative benefit of each possible action  
+
+These two components are combined to produce the final Q-values.
+
+This decomposition improves learning efficiency and stability, particularly in partially observable environments where many actions may produce similar immediate outcomes. It allows the agent to identify dangerous or favorable states even when the best action is uncertain.
+
+
+**Architecture Summary**
 
 CNN → Dense → Dueling streams → Q-values
 
@@ -234,7 +218,7 @@ Similar to fully observable case but adapted:
 
 ---
 
-# Partially Observable Results
+## Partially Observable Results
 
 Evaluation over 5 seeds:
 
@@ -247,29 +231,17 @@ Evaluation over 5 seeds:
 
 ---
 
-# Failure Analysis: Ghost Tail Effect
 
-Dominant failure mechanism.
+### Dominant Failure Mechanism: "Ghost Tail" Effect
 
-Cause:
+The primary failure mechanism observed in the partially observable agent arises from hidden state information outside the observation window.
 
-Hidden state information.
+As the snake grows in length, parts of its body inevitably move beyond the visible region. Because the agent only receives a local observation centered on the head, it loses access to the full body configuration and can no longer track the position of its tail.
 
-As the snake grows:
+This creates a phenomenon known as **perceptual aliasing**, where identical observations correspond to different underlying environment states. From the agent’s perspective, a region may appear safe because the tail is not visible, while in reality that same region is occupied.
 
-Parts of its body exit the observation window.
+As a consequence, the agent selects actions that are locally valid but globally unsafe. This leads to unavoidable self-collisions, a failure mode referred to in this project as the **"Ghost Tail" effect**.
 
-The agent cannot detect its tail.
-
-This produces:
-
-Perceptual aliasing
-
-Identical observations correspond to different true states.
-
-Result:
-
-Self-collision becomes inevitable.
 
 ---
 
@@ -288,57 +260,57 @@ Performance drop:
 
 ---
 
-# Engineering Interpretation
 
-Fully Observable Agent:
+# Architectural Comparison and Limitation Analysis
 
-Global planning capability
+**Fully Observable Agent**
 
-Learns optimal spatial policies
+The fully observable agent demonstrates true global planning capability.  
+With access to the complete grid, it learns spatially optimal policies that preserve free space, avoid self-entrapment, and maximize long-term survival.  
+This confirms that the DDQN architecture is sufficient when the Markov property is satisfied.
 
-Partially Observable Agent:
+**Partially Observable Agent**
 
-Reactive behavior only
+In contrast, the partially observable agent exhibits purely reactive behavior.  
+Because it receives only a local observation, it cannot reconstruct the global topology of the snake’s body. As a result, it optimizes immediate safety and reward but fails to maintain long-term survivability.
 
-Cannot reconstruct global topology
+This reveals a fundamental architectural limitation.
 
-Fundamental architectural limitation.
+Frame stacking provides only **finite temporal memory**, which is sufficient to recover short-term motion information such as velocity and direction, but insufficient to reconstruct the full spatial configuration of the environment.
 
-Frame stacking provides:
+Due to the poor performance and low efficiency of the Dueling DDQN in the partially observable environment, a different approach was also explored. Specifically, a **policy-gradient agent based on Proximal Policy Optimization (PPO)** was developed to investigate whether an alternative learning paradigm could achieve more robust behavior under partial observability.
 
-Finite memory
-
-Insufficient for topology reconstruction.
-
-Recurrent networks would be required.
-
-Example:
-
-LSTM / GRU
 
 ---
 
-# Bonus: PPO Agent
+# PPO Agent (Bonus)
 
-Motivation:
 
-Address memory and stability limitations of value-based methods.
+**Motivation**
 
-Approach:
+The PPO agent was introduced to address the key limitations observed in value-based methods, particularly under partial observability.  
+The Dueling DDQN showed low performance and instability, mainly due to its limited memory capacity and difficulty in learning robust policies from incomplete state information.
 
-Policy Gradient method:
+**Approach**
 
-Proximal Policy Optimization
+To overcome these limitations, a different reinforcement learning paradigm was adopted.  
+Specifically, a **policy-gradient method**, Proximal Policy Optimization (PPO), was implemented.
 
-Goal:
+Unlike value-based methods, PPO directly learns the policy function, optimizing the probability of selecting actions that maximize the expected cumulative reward.  
+Its clipped objective function improves training stability and prevents destructive policy updates.
 
-Improve performance under partial observability.
+**Goal**
 
-Comparison performed with DQN-based agents.
+The objective of this agent was to achieve more stable and effective behavior in the partially observable environment, where value-based architectures struggled.
+
+**Evaluation**
+
+The PPO agent was systematically evaluated and its performance was quantitatively compared against the DQN-based agents (DDQN and Dueling DDQN) to assess the impact of the different learning paradigm.
+
 
 ---
 
-# Key Conclusions
+### Key Conclusions
 
 Main findings:
 
@@ -352,58 +324,9 @@ Main findings:
 
 5. Observability is a critical factor in reinforcement learning performance.
 
----
-
-# Project Contributions
-
-Implemented:
-
-Heuristic path-planning agent
-
-Double DQN agent
-
-Dueling Double DQN agent
-
-PPO agent
-
-Evaluated:
-
-Fully observable vs partially observable environments
-
-Analyzed:
-
-Architectural limitations
-
-Failure modes
-
-Impact of observability
 
 ---
 
-
----
-
-# Summary
-
-This project demonstrates, in a controlled engineering setting, how:
-
-Reinforcement Learning performance depends critically on:
-
-Architecture
-
-Observability
-
-Memory
-
-and state representation.
-
-It highlights the transition from:
-
-Reactive policies
-
-to
-
-Strategic planning systems.
 
 
 
