@@ -1,6 +1,5 @@
 # Snake Reinforcement Learning Project
 
----
 
 **Student**: Salvatore Ferracane
 
@@ -10,7 +9,7 @@
 
 University of Padua, Italy
 
-**a.y**: 2025/2026
+**a.y.** 2025/2026
 
 
 
@@ -22,6 +21,15 @@ This project implements and evaluates multiple Reinforcement Learning (RL) agent
 
 The project was developed as part of a Reinforcement Learning course and focuses on the **practical implementation, evaluation, and comparison of value-based and policy-based RL methods**, highlighting the impact of observability and architecture on performance.
 
+### 🛠️ Installation & Dependencies
+
+To run this project, ensure you have **Python 3.8+** installed. The project relies on deep learning frameworks and visualization tools.
+
+You can install all the required packages at once by running the following command in your terminal:
+
+```bash
+pip install numpy tensorflow matplotlib seaborn tqdm ipykernel
+```
 ---
 
 ## Environment and Reward Design
