@@ -145,9 +145,12 @@ Key parameters:
 | Standard DQN | 0.1208 |
 | Double DQN | 0.1226 |
 
-Improvement over heuristic:
+Improvement over heuristic: ~160%
 
-~160%
+**Learning Progress of Doubl-DQN Agent**
+
+![Miglior Agente PO](./results_fo/final_agent_gameplay_FO.gif)
+
 
 ---
 
@@ -237,6 +240,11 @@ Evaluation over 5 seeds:
 | Wall collision | 0% |
 | Self collision | 100% |
 
+**Best Agent**
+
+![Miglior Agente PO](./eval_results_po/best_po_agent.gif)
+
+
 ---
 
 
@@ -262,9 +270,7 @@ As a consequence, the agent selects actions that are locally valid but globally 
 | Wall collisions | 0% | 0% |
 | Self collisions | <5% | 100% |
 
-Performance drop:
-
-97.7%
+Performance drop: 97.7%
 
 ---
 
@@ -273,20 +279,13 @@ Performance drop:
 
 **Fully Observable Agent**
 
-The fully observable agent demonstrates true global planning capability.  
-With access to the complete grid, it learns spatially optimal policies that preserve free space, avoid self-entrapment, and maximize long-term survival.  
-This confirms that the DDQN architecture is sufficient when the Markov property is satisfied.
+The fully observable agent demonstrates true global planning capability. With access to the complete grid, it learns spatially optimal policies that preserve free space, avoid self-entrapment, and maximize long-term survival. This confirms that the DDQN architecture is sufficient when the Markov property is satisfied.
 
 **Partially Observable Agent**
 
-In contrast, the partially observable agent exhibits purely reactive behavior.  
-Because it receives only a local observation, it cannot reconstruct the global topology of the snake’s body. As a result, it optimizes immediate safety and reward but fails to maintain long-term survivability.
+In contrast, the partially observable agent exhibits purely reactive behavior. It receives only a local observation, it cannot reconstruct the global topology of the snake’s body. As a result, it optimizes immediate safety and reward but fails to maintain long-term survivability.
 
-This reveals a fundamental architectural limitation.
-
-Frame stacking provides only **finite temporal memory**, which is sufficient to recover short-term motion information such as velocity and direction, but insufficient to reconstruct the full spatial configuration of the environment.
-
-Due to the poor performance and low efficiency of the Dueling DDQN in the partially observable environment, a different approach was also explored. Specifically, a **policy-gradient agent based on Proximal Policy Optimization (PPO)** was developed to investigate whether an alternative learning paradigm could achieve more robust behavior under partial observability.
+This reveals a fundamental architectural limitation that I have tried to solve with ```Frame stacking```. However, this **finite temporal memory** is sufficient to recover short-term motion information such as velocity and direction, but insufficient to reconstruct the full spatial configuration of the environment. In fact, due to the poor performance and low efficiency of the Dueling DDQN in the partially observable environment, a different approach was also explored. Specifically, a **policy-gradient agent based on Proximal Policy Optimization (PPO)** was developed to investigate whether an alternative learning paradigm could achieve more robust behavior under **partial observability**.
 
 
 ---
@@ -296,16 +295,9 @@ Due to the poor performance and low efficiency of the Dueling DDQN in the partia
 
 **Motivation**
 
-The PPO agent was introduced to address the key limitations observed in value-based methods, particularly under partial observability.  
-The Dueling DDQN showed low performance and instability, mainly due to its limited memory capacity and difficulty in learning robust policies from incomplete state information.
+The PPO agent was introduced to address the key limitations observed in value-based methods, particularly under partial observability. The Dueling DDQN showed low performance and instability, mainly due to its limited memory capacity and difficulty in learning robust policies from incomplete state information. To overcome these limitations, a different reinforcement learning paradigm was adopted. Specifically, a **policy-gradient method**, Proximal Policy Optimization (PPO), was implemented.
 
-**Approach**
-
-To overcome these limitations, a different reinforcement learning paradigm was adopted.  
-Specifically, a **policy-gradient method**, Proximal Policy Optimization (PPO), was implemented.
-
-Unlike value-based methods, PPO directly learns the policy function, optimizing the probability of selecting actions that maximize the expected cumulative reward.  
-Its clipped objective function improves training stability and prevents destructive policy updates.
+Unlike value-based methods, PPO directly learns the policy function, optimizing the probability of selecting actions that maximize the expected cumulative reward. Moreover, Its clipped objective function improves training stability and prevents destructive policy updates.
 
 **Goal**
 
