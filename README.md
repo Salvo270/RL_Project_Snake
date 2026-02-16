@@ -1,16 +1,15 @@
 # Snake Reinforcement Learning Project
 
 
-**Student**: Salvatore Ferracane
-
-**Course**: Reinforcement Learning
-
-**Master Degree**: Control Systems Engineering
-
-University of Padua, Italy
-
-**a.y.** 2025/2026
-
+> **Student**: Salvatore Ferracane (m. 2154255)
+> 
+> **Course**: Reinforcement Learning
+> 
+> **Master Degree**: Control Systems Engineering
+>
+>  University of Padua, Italy
+> 
+> **a.y.** 2025/2026
 
 
 ---
@@ -21,7 +20,7 @@ This project implements and evaluates multiple Reinforcement Learning (RL) agent
 
 The project was developed as part of a Reinforcement Learning course and focuses on the **practical implementation, evaluation, and comparison of value-based and policy-based RL methods**, highlighting the impact of observability and architecture on performance.
 
-### 🛠️ Installation & Dependencies
+🛠️ **Installation & Dependencies**
 
 To run this project, ensure you have **Python 3.8+** installed. The project relies on deep learning frameworks and visualization tools.
 
@@ -30,6 +29,37 @@ You can install all the required packages at once by running the following comma
 ```bash
 pip install numpy tensorflow matplotlib seaborn tqdm ipykernel
 ```
+
+📂 **Project Structure**
+```
+.
+├── main.ipynb                        # Main entry point
+├── dqn_agent.py                      # Standard DQN Agent
+├── po_dqn_agent.py                   # Partially Observable DQN Agent
+├── ppo_agent.py                      # PPO Agent with LSTM
+├── environments_fully_observable.py  # FO Snake Environment
+├── environments_partially_observable.py # PO Snake Environment
+├── evaluate_dqn.py                   # Evaluation Logic (FO)
+├── evaluate_po.py                    # Evaluation Logic (PO)
+└── evaluate_ppo.py                   # Evaluation Logic (PPO)
+```
+
+### 🚀 Usage & Execution
+
+The entire project workflow—including training loops, evaluation metrics, and graph generation—is centralized within the **`main.ipynb`** notebook.
+
+To reproduce the experiments:
+1. Open `main.ipynb` in Jupyter Notebook, Jupyter Lab, or VS Code.
+2. Install the dependencies listed above.
+3. **Run the cells sequentially** to load the environments and agents.
+4. Navigate to the specific section (Fully Observable DQN, Partially Observable DDDQN, or PPO) to trigger training or evaluation.
+
+ ⚠️ **Performance Note: PPO Agent**
+ 
+Please be aware that training the **PPO Agent with LSTM memory** is computationally intensive due to the complexity of Backpropagation Through Time (BPTT) and the on-policy nature of the algorithm.
+
+> **Hardware Benchmark:** On a standard laptop equipped with a CPU supporting **AVX2 FMA** instructions, the complete PPO training process required approximately **3 days** to reach optimal convergence. Using a discrete GPU (CUDA-enabled) is highly recommended to significantly reduce this time.
+
 ---
 
 ## Environment and Reward Design
