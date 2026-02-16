@@ -1,0 +1,9 @@
+{
+    "episodes": 100,
+    "reward_mean": 2.979999997019768,
+    "reward_std": 1.5500322577288512,
+    "steps_mean": 24.64,
+    "fruit_rate_mean": 0.25811688311688313,
+    "safety_wall_crash_rate": 0.0,
+    "safety_self_crash_rate": 1.0
+}
