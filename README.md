@@ -340,6 +340,8 @@ The objective of this agent was to achieve more stable and effective behavior in
 The PPO agent was systematically evaluated and its performance was quantitatively compared against the DQN-based agents (DDQN and Dueling DDQN) to assess the impact of the different learning paradigm.
 
 
+![Miglior Agente PO](./ppo_training_final_analysis.pdf)
+
 ---
 
 ### Key Conclusions
