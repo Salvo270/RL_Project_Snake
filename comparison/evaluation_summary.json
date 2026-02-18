@@ -1,0 +1,96 @@
+{
+  "config": {
+    "board_size": 7,
+    "n_actions": 4,
+    "max_steps": 1000,
+    "n_episodes_per_seed": 20,
+    "seeds": [
+      42,
+      100,
+      2024,
+      777,
+      99
+    ],
+    "greedy": true,
+    "weights_path": "dqn_snake_final.weights.h5"
+  },
+  "overall": {
+    "episodes": 100.0,
+    "reward_mean": 132.13299560546875,
+    "reward_std": 3.623314619064331,
+    "reward_ci95": 0.7101696653366089,
+    "reward_min": 123.0999984741211,
+    "reward_max": 141.5,
+    "fruit_rate_mean": 0.2855199873447418,
+    "fruit_rate_std": 0.00698495376855135,
+    "safety_event_rate_mean": 0.05328000709414482,
+    "safety_event_rate_std": 0.004017661325633526
+  },
+  "by_seed": {
+    "42": {
+      "episodes": 20.0,
+      "reward_mean": 131.6900177001953,
+      "reward_std": 3.894212484359741,
+      "reward_ci95": 1.7067138714359165,
+      "reward_min": 125.0999984741211,
+      "reward_max": 138.6999969482422,
+      "fruit_rate_mean": 0.28494998812675476,
+      "fruit_rate_std": 0.00745971966534853,
+      "safety_event_rate_mean": 0.05400000140070915,
+      "safety_event_rate_std": 0.0042426404543221
+    },
+    "100": {
+      "episodes": 20.0,
+      "reward_mean": 132.23500061035156,
+      "reward_std": 2.860119104385376,
+      "reward_ci95": 1.2535024652656974,
+      "reward_min": 126.19999694824219,
+      "reward_max": 138.3000030517578,
+      "fruit_rate_mean": 0.28560003638267517,
+      "fruit_rate_std": 0.00511273043230176,
+      "safety_event_rate_mean": 0.052949994802474976,
+      "safety_event_rate_std": 0.0037479994352906942
+    },
+    "2024": {
+      "episodes": 20.0,
+      "reward_mean": 131.49501037597656,
+      "reward_std": 3.5468955039978027,
+      "reward_ci95": 1.5544954933813828,
+      "reward_min": 124.80000305175781,
+      "reward_max": 139.5,
+      "fruit_rate_mean": 0.2842499613761902,
+      "fruit_rate_std": 0.007313511800020933,
+      "safety_event_rate_mean": 0.053199999034404755,
+      "safety_event_rate_std": 0.0037762417923659086
+    },
+    "777": {
+      "episodes": 20.0,
+      "reward_mean": 132.22500610351562,
+      "reward_std": 3.43363881111145,
+      "reward_ci95": 1.5048585591980455,
+      "reward_min": 126.19999694824219,
+      "reward_max": 137.6999969482422,
+      "fruit_rate_mean": 0.2857000231742859,
+      "fruit_rate_std": 0.0064660655334591866,
+      "safety_event_rate_mean": 0.05354999750852585,
+      "safety_event_rate_std": 0.0030409705359488726
+    },
+    "99": {
+      "episodes": 20.0,
+      "reward_mean": 133.02000427246094,
+      "reward_std": 4.06418514251709,
+      "reward_ci95": 1.781207673355325,
+      "reward_min": 123.0999984741211,
+      "reward_max": 141.5,
+      "fruit_rate_mean": 0.28710004687309265,
+      "fruit_rate_std": 0.00789873581379652,
+      "safety_event_rate_mean": 0.05270000174641609,
+      "safety_event_rate_std": 0.004910193383693695
+    }
+  },
+  "artifacts": {
+    "episodes_csv": "/home/salvatore/Desktop/RL_Project/snake/evaluation_episodes.csv",
+    "summary_json": "/home/salvatore/Desktop/RL_Project/snake/evaluation_summary.json",
+    "gif": "/home/salvatore/Desktop/RL_Project/snake/final_agent_gameplay.gif"
+  }
+}
