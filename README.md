@@ -20,7 +20,7 @@ This project implements and evaluates multiple Reinforcement Learning (RL) agent
 
 The project was developed as part of a Reinforcement Learning course and focuses on the **practical implementation, evaluation, and comparison of value-based and policy-based RL methods**, highlighting the impact of observability and architecture on performance.
 
-A more detailed discussion about the project is available in the [dedicated paper](Paper_Snake_Salvatore_Ferracane_2154255.pdf).
+A more detailed discussion about the project is available in the [dedicated paper](Paper_Snake_Salvatore_Ferracane_2154255.pdf). While, the weights of the RL Agents are available in the dedicated **Release**. 
 
 🛠️ **Installation & Dependencies**
 
