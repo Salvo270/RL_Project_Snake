@@ -20,27 +20,28 @@ This project implements and evaluates multiple Reinforcement Learning (RL) agent
 
 The project was developed as part of a Reinforcement Learning course and focuses on the **practical implementation, evaluation, and comparison of value-based and policy-based RL methods**, highlighting the impact of observability and architecture on performance.
 
-A more detailed discussion about the project is available in the following paper ...
+A more detailed discussion about the project is available in the [dedicated paper](Paper_Snake_Salvatore_Ferracane_2154255.pdf).
 
 🛠️ **Installation & Dependencies**
 
-To run this project, ensure you have **Python 3.8+** installed. The project relies on deep learning frameworks and visualization tools.
+All the main [requirements](requirements.txt) are reported in **`requirements.txt `**. 
 
 You can install all the required packages at once by running the following command in your terminal:
 
 ```bash
-pip install numpy tensorflow matplotlib seaborn tqdm ipykernel
+pip install numpy tensorflow-cpu matplotlib seaborn tqdm ipykernel jupyter
 ```
 
 📂 **Project Structure**
 ```
 .
-├── main.ipynb                        # Main entry point
+├── main.ipynb                        # Main entry point               <-- Guide to traing each RL Agent
 ├── dqn_agent.py                      # Standard DQN Agent
 ├── po_dqn_agent.py                   # Partially Observable DQN Agent
 ├── ppo_agent.py                      # PPO Agent with LSTM
 ├── environments_fully_observable.py  # FO Snake Environment
 ├── environments_partially_observable.py # PO Snake Environment
+├── evaluate.py                       # Evaluation for all the Agent   <-- Main evaluation results to be executed!
 ├── evaluate_dqn.py                   # Evaluation Logic (FO)
 ├── evaluate_po.py                    # Evaluation Logic (PO)
 └── evaluate_ppo.py                   # Evaluation Logic (PPO)
@@ -48,7 +49,7 @@ pip install numpy tensorflow matplotlib seaborn tqdm ipykernel
 
 ### 🚀 Usage & Execution
 
-The entire project workflow—including training loops, evaluation metrics, and graph generation—is centralized within the **`main.ipynb`** notebook.
+The entire project workflow—including training loops, evaluation metrics, and graph generation—is centralized within the **`main.ipynb`** notebook and **`evaluate.py `** (as requested by the Professor).
 
 To reproduce the experiments:
 1. Open `main.ipynb` in Jupyter Notebook, Jupyter Lab, or VS Code.
@@ -56,10 +57,10 @@ To reproduce the experiments:
 3. **Run the cells sequentially** to load the environments and agents.
 4. Navigate to the specific section (Fully Observable DQN, Partially Observable DDDQN, or PPO) to trigger training or evaluation.
 
- ⚠️ **Performance Note: PPO Agent**
- 
-## High-Performance Training on NVIDIA A100
+Alternatively, just execute **`evaluate.py `** which uses the already available weights to perform the evaluations. 
 
+
+ ⚠️ **Performance Note: PPO Agent**
 This project is optimized for execution on **NVIDIA A100 Tensor Core GPUs** via Google Colab. To fully leverage the massive parallel processing power of the A100, the PPO implementation incorporates several key optimizations that prevent the CPU from becoming a bottleneck.
 
 ### ⚡ Key Optimizations
@@ -69,13 +70,6 @@ This project is optimized for execution on **NVIDIA A100 Tensor Core GPUs** via 
 * **LSTM Unrolling:** To maintain XLA compatibility while using recurrent layers, the LSTM units are configured with `unroll=True`. This bypasses CuDNN-specific kernels that are incompatible with XLA, allowing for a fully compiled and optimized computation graph.
 * **Vectorized GAE & Terminal Checks:** Advantage estimation and environment state checks are handled using NumPy/TensorFlow vector operations, ensuring the CPU spends minimal time on bookkeeping and maximal time feeding data to the GPU.
 
-### 📊 Hardware Utilization Profile
-
-| Feature | Optimization | Impact on A100 |
-| :--- | :--- | :--- |
-| **Throughput** | Batched Action Selection | High GPU Occupancy |
-| **Computation** | XLA JIT Compilation | Reduced Op Latency |
-| **Memory** | Precision Scaling & Buffering | Faster Data Flow |
 
 
 
@@ -293,7 +287,7 @@ Evaluation over 5 seeds:
 
 **Best Agent**
 
-![Miglior Agente PO](./eval_results_po/best_po_agent.gif)
+![Best Gameplay by Dueling DDQN Agent](./eval_results_po/best_po_agent.gif)
 
 
 ---
@@ -354,31 +348,14 @@ Unlike value-based methods, PPO directly learns the policy function, optimizing 
 
 The objective of this agent was to achieve more stable and effective behavior in the partially observable environment, where value-based architectures struggled.
 
-**Evaluation**
+**Result**
 
-The PPO agent was systematically evaluated and its performance was quantitatively compared against the DQN-based agents (DDQN and Dueling DDQN) to assess the impact of the different learning paradigm.
-
-
-![Miglior Agente PO](./ppo_training_final_analysis.pdf)
-
----
-
-### Key Conclusions
-
-Main findings:
-
-1. Double DQN successfully solves the fully observable Snake environment.
-
-2. Partial observability introduces structural performance limits.
-
-3. The primary failure mechanism is hidden state information.
-
-4. Feed-forward architectures cannot solve topology-dependent POMDPs.
-
-5. Observability is a critical factor in reinforcement learning performance.
+Best PPO Agent game play:
 
 
----
+
+![Best Gameplay by PPO Agent](ppo_results/ppo_best_gameplay.gif)
+
 
 
 
