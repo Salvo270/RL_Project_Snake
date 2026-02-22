@@ -98,6 +98,7 @@ def evaluate_one_episode(
         current_stacked_state = agent.stacker.buffer
         
         # Use greedy action selection for evaluation
+        # Note: training=not greedy ensures we use deterministic argmax if greedy=True
         action, _, _ = agent.select_action(current_stacked_state, training=not greedy)
         action_array = np.array([[action]])
         
@@ -105,29 +106,43 @@ def evaluate_one_episode(
         reward = scalar_reward(reward_tensor)
 
         total_reward += reward
+        
+        # --- TERMINATION LOGIC ---
+        done = False
         if np.isclose(reward, env.FRUIT_REWARD):
             fruit_count += 1
         elif np.isclose(reward, env.HIT_WALL_REWARD):
             wall_hits += 1
+            done = True  # Stop episode on death
         elif np.isclose(reward, env.ATE_HIMSELF_REWARD):
             self_hits += 1
+            done = True  # Stop episode on death
         elif np.isclose(reward, env.WIN_REWARD):
             wins += 1
+            done = True  # Stop episode on victory
 
         next_raw_state = np.asarray(env.to_state(), dtype=np.float32)
         agent.stacker.update(next_raw_state)
+        
+        if done:
+            break
+        # -----------------------------------
+
+    # Calculate actual steps taken
+    n_steps = len(frames)
+    if n_steps == 0: n_steps = 1 # Avoid division by zero safety
 
     return {
         "total_reward": float(total_reward),
-        "avg_reward_per_step": float(total_reward / max_steps),
+        "avg_reward_per_step": float(total_reward / n_steps),
         "fruit_count": int(fruit_count),
-        "fruit_rate": float(fruit_count / max_steps),
+        "fruit_rate": float(fruit_count / n_steps),
         "wall_hits": int(wall_hits),
-        "wall_hit_rate": float(wall_hits / max_steps),
+        "wall_hit_rate": float(wall_hits / n_steps),
         "self_hits": int(self_hits),
-        "self_hit_rate": float(self_hits / max_steps),
+        "self_hit_rate": float(self_hits / n_steps),
         "wins": int(wins),
-        "win_rate": float(wins / max_steps),
+        "win_rate": float(wins / n_steps),
         "frames": frames,
     }
 

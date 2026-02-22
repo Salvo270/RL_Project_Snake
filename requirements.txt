@@ -1,0 +1,7 @@
+numpy
+tensorflow-cpu
+matplotlib
+seaborn
+tqdm
+ipykernel
+jupyter

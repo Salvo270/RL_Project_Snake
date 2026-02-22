@@ -1,6 +1,6 @@
 """
 PPO Agent with LSTM for Partially Observable Snake Environment.
-Optimized for POMDPs with temporal memory and efficient exploration.
+Optimized for A100 GPU (Batched Inference & XLA Compilation).
 """
 
 from dataclasses import dataclass
@@ -9,6 +9,19 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
+
+# OPTIMIZATION 1: Force GPU and enable XLA compilation
+gpus = tf.config.list_physical_devices('GPU')
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+        tf.config.set_visible_devices(gpus[0], 'GPU')
+    except RuntimeError:
+        pass
+
+# Enable XLA for major speedup on A100
+tf.config.optimizer.set_jit(True)
 
 
 @dataclass
@@ -35,13 +48,11 @@ class FrameStacker:
         self.buffer = None
         
     def reset(self, initial_state: np.ndarray) -> np.ndarray:
-        """Initialize with repeated first observation."""
         single = initial_state[0] if len(initial_state.shape) == 4 else initial_state
         self.buffer = np.repeat(single[np.newaxis, ...], self.n_stack, axis=0)
         return self.buffer
     
     def update(self, new_state: np.ndarray) -> np.ndarray:
-        """Roll buffer and add new observation."""
         single = new_state[0] if len(new_state.shape) == 4 else new_state
         self.buffer = np.roll(self.buffer, shift=-1, axis=0)
         self.buffer[-1] = single
@@ -57,51 +68,38 @@ def build_actor_critic_lstm(
     n_actions: int,
     config: PPOConfig
 ) -> keras.Model:
-    """
-    Shared architecture with LSTM for temporal dependencies.
-    Returns both policy logits and value estimate.
+    """Shared architecture with LSTM for temporal dependencies."""
     
-    state_shape: (n_stack, height, width, channels)
-    """
-    
-    # Input: (batch, n_stack, height, width, channels)
     state_input = layers.Input(shape=state_shape, name='state')
     
-    # TimeDistributed CNN to process each frame independently
     conv1 = layers.TimeDistributed(
-        layers.Conv2D(32, (3, 3), activation='relu', padding='same'),
-        name='conv1'
+        layers.Conv2D(24, (3, 3), activation='relu', padding='same'), name='conv1'
     )(state_input)
     
     conv2 = layers.TimeDistributed(
-        layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
-        name='conv2'
+        layers.Conv2D(48, (3, 3), activation='relu', padding='same'), name='conv2'
     )(conv1)
     
     conv3 = layers.TimeDistributed(
-        layers.Conv2D(64, (2, 2), activation='relu', padding='same'),
-        name='conv3'
+        layers.Conv2D(48, (2, 2), activation='relu', padding='same'), name='conv3'
     )(conv2)
     
-    # Flatten spatial dimensions for each timestep
     flattened = layers.TimeDistributed(layers.Flatten(), name='flatten')(conv3)
     
-    # LSTM for temporal integration across stacked frames
+    # CRITICAL FIX for XLA + LSTM: unroll=True bypasses the incompatible CuDNN kernel
     lstm_out = layers.LSTM(
-        config.lstm_units,
-        return_sequences=False,
+        96, 
+        return_sequences=False, 
+        unroll=True, 
         name='lstm_memory'
     )(flattened)
     
-    # Shared dense layer
     shared = layers.Dense(config.dense_units, activation='relu', name='shared_dense')(lstm_out)
     shared = layers.LayerNormalization()(shared)
     
-    # Policy head (actor)
     policy = layers.Dense(128, activation='relu', name='policy_dense')(shared)
     policy_logits = layers.Dense(n_actions, activation=None, name='policy_logits')(policy)
     
-    # Value head (critic)
     value = layers.Dense(128, activation='relu', name='value_dense')(shared)
     value_output = layers.Dense(1, activation=None, name='value')(value)
     
@@ -115,7 +113,7 @@ def build_actor_critic_lstm(
 
 
 class PPOAgent:
-    """PPO Agent with LSTM for Partially Observable Environments."""
+    """PPO Agent with LSTM - OPTIMIZED for A100."""
     
     def __init__(
         self,
@@ -130,24 +128,21 @@ class PPOAgent:
         self.n_boards = n_boards
         self.config = config or PPOConfig()
         
-        # Frame stacking for temporal context
         self.stacker = FrameStacker(raw_state_shape, n_stack)
         self.stacked_shape = self.stacker.stacked_shape
         
-        # Build network
-        self.model = build_actor_critic_lstm(
-            self.stacked_shape,
-            n_actions,
-            self.config
-        )
+        with tf.device('/GPU:0'):
+            self.model = build_actor_critic_lstm(
+                self.stacked_shape,
+                n_actions,
+                self.config
+            )
         
-        # Optimizer
         self.optimizer = keras.optimizers.Adam(
             learning_rate=self.config.learning_rate,
             clipnorm=self.config.max_grad_norm
         )
         
-        # Training metrics
         self.metrics = {
             'policy_loss': keras.metrics.Mean(),
             'value_loss': keras.metrics.Mean(),
@@ -155,33 +150,36 @@ class PPOAgent:
             'total_loss': keras.metrics.Mean(),
             'kl_divergence': keras.metrics.Mean(),
         }
-    
-    def select_action(
-        self,
-        state: np.ndarray,
-        training: bool = True
-    ) -> Tuple[int, float, float]:
-        """
-        Select action using current policy.
-        Returns: (action, log_prob, value)
-        """
-        state_tensor = tf.convert_to_tensor(state[np.newaxis, ...], dtype=tf.float32)
-        
-        logits, value = self.model(state_tensor, training=False)
+
+    @tf.function(jit_compile=True)
+    def _select_action_batch_tf(self, states_tensor, training):
+        """Compiled TensorFlow graph for fast batch inference on GPU."""
+        logits, values = self.model(states_tensor, training=False)
         
         if training:
-            # Sample from categorical distribution
             action_dist = tf.random.categorical(logits, num_samples=1)
-            action = int(action_dist[0, 0])
+            actions = tf.squeeze(action_dist, axis=-1)
         else:
-            # Greedy action
-            action = int(tf.argmax(logits[0]))
-        
-        # Compute log probability
+            actions = tf.argmax(logits, axis=-1)
+            
         log_probs = tf.nn.log_softmax(logits, axis=-1)
-        action_log_prob = log_probs[0, action]
         
-        return action, float(action_log_prob), float(value[0, 0])
+        # Gather log_probs for the chosen actions
+        indices = tf.stack([tf.range(tf.shape(actions)[0], dtype=actions.dtype), actions], axis=1)
+        action_log_probs = tf.gather_nd(log_probs, indices)
+        
+        return actions, action_log_probs, tf.squeeze(values, axis=-1)
+
+    def select_action_batch(self, states: np.ndarray, training: bool = True) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Takes a batch of states (N_BOARDS, ...) and returns actions, log_probs, and values."""
+        states_tensor = tf.convert_to_tensor(states, dtype=tf.float32)
+        actions, log_probs, values = self._select_action_batch_tf(states_tensor, tf.constant(training))
+        return actions.numpy(), log_probs.numpy(), values.numpy()
+    
+    def select_action(self, state: np.ndarray, training: bool = True) -> Tuple[int, float, float]:
+        """Legacy single-state inference for compatibility."""
+        actions, log_probs, values = self.select_action_batch(state[np.newaxis, ...], training)
+        return int(actions[0]), float(log_probs[0]), float(values[0])
     
     def compute_gae(
         self,
@@ -190,32 +188,21 @@ class PPOAgent:
         dones: np.ndarray,
         next_value: float
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Generalized Advantage Estimation.
-        Returns: (advantages, returns)
-        """
+        """Generalized Advantage Estimation."""
         advantages = np.zeros_like(rewards, dtype=np.float32)
-        last_gae = 0.0
-        
-        # Bootstrap from next value
         values_extended = np.append(values, next_value)
         
+        deltas = rewards + self.config.gamma * values_extended[1:] * (1 - dones) - values
+        
+        gae = 0.0
         for t in reversed(range(len(rewards))):
-            if dones[t]:
-                next_value_t = 0.0
-                last_gae = 0.0
-            else:
-                next_value_t = values_extended[t + 1]
-            
-            delta = rewards[t] + self.config.gamma * next_value_t - values[t]
-            last_gae = delta + self.config.gamma * self.config.lambda_gae * last_gae
-            advantages[t] = last_gae
+            gae = deltas[t] + self.config.gamma * self.config.lambda_gae * (1 - dones[t]) * gae
+            advantages[t] = gae
         
         returns = advantages + values
-        
         return advantages, returns
     
-    @tf.function
+    @tf.function(jit_compile=True, reduce_retracing=True)
     def train_step(
         self,
         states: tf.Tensor,
@@ -224,18 +211,15 @@ class PPOAgent:
         advantages: tf.Tensor,
         returns: tf.Tensor
     ) -> dict:
-        """Single PPO training step."""
+        """Single PPO training step - XLA JIT compiled."""
         
         with tf.GradientTape() as tape:
-            # Forward pass
             logits, values = self.model(states, training=True)
             values = tf.squeeze(values, axis=-1)
             
-            # Policy loss (clipped)
             log_probs = tf.nn.log_softmax(logits, axis=-1)
             action_log_probs = tf.reduce_sum(
-                log_probs * tf.one_hot(actions, self.n_actions),
-                axis=-1
+                log_probs * tf.one_hot(actions, self.n_actions), axis=-1
             )
             
             ratio = tf.exp(action_log_probs - old_log_probs)
@@ -249,26 +233,19 @@ class PPOAgent:
                 tf.minimum(ratio * advantages, clipped_ratio * advantages)
             )
             
-            # Value loss (clipped)
             value_loss = tf.reduce_mean(tf.square(returns - values))
             
-            # Entropy bonus for exploration
             probs = tf.nn.softmax(logits, axis=-1)
-            entropy = -tf.reduce_mean(
-                tf.reduce_sum(probs * log_probs, axis=-1)
-            )
+            entropy = -tf.reduce_mean(tf.reduce_sum(probs * log_probs, axis=-1))
             
-            # Total loss
             total_loss = (
                 policy_loss +
                 self.config.value_coef * value_loss -
                 self.config.entropy_coef * entropy
             )
             
-            # KL divergence for monitoring
             kl = tf.reduce_mean(old_log_probs - action_log_probs)
         
-        # Compute and apply gradients
         gradients = tape.gradient(total_loss, self.model.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
         
@@ -288,26 +265,19 @@ class PPOAgent:
         advantages: np.ndarray,
         returns: np.ndarray
     ) -> dict:
-        """
-        Update policy using collected trajectories.
-        Performs multiple epochs with minibatch updates.
-        """
+        """Update policy using collected trajectories."""
         
-        # Normalize advantages
         advantages = (advantages - np.mean(advantages)) / (np.std(advantages) + 1e-8)
         
-        # Reset metrics
         for metric in self.metrics.values():
             metric.reset_state()
         
         n_samples = len(states)
         indices = np.arange(n_samples)
         
-        # Multiple epochs
         for epoch in range(self.config.n_epochs):
             np.random.shuffle(indices)
             
-            # Mini-batch updates
             for start in range(0, n_samples, self.config.batch_size):
                 end = start + self.config.batch_size
                 batch_idx = indices[start:end]
@@ -326,11 +296,9 @@ class PPOAgent:
                     batch_returns
                 )
                 
-                # Update running metrics
                 for key, value in metrics.items():
                     self.metrics[key].update_state(value)
         
-        # Return average metrics
         return {key: float(metric.result()) for key, metric in self.metrics.items()}
     
     def save_weights(self, filepath: str):
